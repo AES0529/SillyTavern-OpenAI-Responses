@@ -1,0 +1,15 @@
+{
+    "display_name": "OpenAI Responses",
+    "loading_order": 5,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "SillyTavern community",
+    "version": "0.1.0",
+    "minimum_client_version": "1.18.0",
+    "auto_update": true,
+    "hooks": {
+        "activate": "init"
+    }
+}

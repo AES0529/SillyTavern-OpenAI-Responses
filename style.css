@@ -1,0 +1,18 @@
+.openai-responses-note {
+    margin-top: 0.5rem;
+    padding: 0.65rem 0.75rem;
+    border-left: 3px solid var(--SmartThemeQuoteColor);
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor) 85%, transparent);
+    font-size: 0.9em;
+}
+
+.openai-responses-settings .inline-drawer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0.75rem;
+}
+
+.openai-responses-active .openai-responses-unsupported {
+    display: none !important;
+}
