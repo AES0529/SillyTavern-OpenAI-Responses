@@ -22,7 +22,7 @@
 
 ## 安装
 
-该扩展需要把**同一个 Git 仓库安装两次**。发布到 GitHub 后，将下面的 `<仓库地址>` 换成你的仓库 URL。
+该扩展需要把**同一个 Git 仓库安装两次**。
 
 ### 1. 安装前端扩展
 
@@ -30,12 +30,6 @@
 
 ```text
 <仓库地址>
-```
-
-也可以把仓库复制到：
-
-```text
-SillyTavern/public/scripts/extensions/third-party/openai-responses
 ```
 
 ### 2. 安装服务端插件
