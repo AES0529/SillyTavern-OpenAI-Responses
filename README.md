@@ -34,16 +34,16 @@ https://github.com/AES0529/SillyTavern-OpenAI-Responses
 
 ### 2. 安装服务端插件
 
-在 SillyTavern 根目录运行：
-
-```bash
-node plugins.js install https://github.com/AES0529/SillyTavern-OpenAI-Responses
-```
-
-并确认 `config.yaml` 中启用了服务端插件：
+确认 `config.yaml` 中启用了服务端插件：
 
 ```yaml
 enableServerPlugins: true
+```
+
+并在 SillyTavern 根目录运行：
+
+```bash
+node plugins.js install https://github.com/AES0529/SillyTavern-OpenAI-Responses
 ```
 
 然后完整重启 SillyTavern。
