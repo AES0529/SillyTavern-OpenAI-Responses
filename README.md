@@ -19,6 +19,7 @@
 - `store: false`（默认）或允许 OpenAI 存储 Response
 - Responses usage 到 Chat Completions usage 的映射
 - 无状态工具调用所需的加密 reasoning item 回传
+- SillyTavern `requestProxy`、代理环境变量和 Windows 系统代理
 
 ## 安装
 
@@ -60,6 +61,29 @@ node plugins.js install https://github.com/AES0529/SillyTavern-OpenAI-Responses
 
 Reverse Proxy 应填写 API 基础地址，例如 `https://api.openai.com/v1`；插件会在末尾追加 `/responses`。
 
+## 网络代理
+
+从 `v0.2.0` 开始，服务端插件支持以下出站代理方式：
+
+1. **Windows 系统代理**：自动读取 Windows 当前启用的手动代理或 PAC 地址，兼容 Clash、Mihomo 等软件的“系统代理”模式；代理开关变化会在约 5 秒内生效。
+2. **SillyTavern requestProxy**：适用于 Windows、Linux、macOS 和 Docker，也是跨平台推荐方式。
+3. **环境变量**：支持 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 和 `NO_PROXY`。
+
+SillyTavern 的 `requestProxy` 可在根目录的 `config.yaml` 中配置：
+
+```yaml
+requestProxy:
+  enabled: true
+  url: "http://127.0.0.1:7890"
+  bypass:
+    - localhost
+    - 127.0.0.1
+```
+
+请把示例端口 `7890` 换成代理软件显示的 HTTP/Mixed 端口，然后完整重启 SillyTavern。SOCKS 代理也可以使用，例如 `socks5://127.0.0.1:7891`。
+
+注意：“API 连接”页面里的 **Reverse Proxy** 是模型服务的 API 基础地址，不是网络代理。TUN 模式仍然可以使用，但在 Windows 上开启普通“系统代理”后，插件现在也能自动跟随。
+
 ## 当前限制
 
 - Responses API 一次只生成一个候选，不支持同时并发多个回复。
@@ -71,7 +95,15 @@ Reverse Proxy 应填写 API 基础地址，例如 `https://api.openai.com/v1`；
 
 要求 Node.js 20 或更高版本：
 
+```bash
+npm test
+npm run check
+```
+
 ## 安全说明
 
 - API Key 仍由 SillyTavern 的 secrets 系统保存；前端扩展不会读取已保存的明文密钥。
+
+## License
+
 AGPL-3.0-only

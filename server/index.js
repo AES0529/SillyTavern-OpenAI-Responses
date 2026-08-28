@@ -10,6 +10,7 @@ import {
     createStreamState,
     getResponsesEndpoint,
 } from './adapter.js';
+import { createOutboundProxyController } from './proxy.js';
 
 export const info = {
     id: 'openai-responses',
@@ -18,6 +19,10 @@ export const info = {
 };
 
 const OFFICIAL_API_BASE = 'https://api.openai.com/v1';
+const PLUGIN_VERSION = '0.2.0';
+
+let outboundFetch;
+let outboundProxy;
 
 async function loadSecretApi() {
     const here = path.dirname(fileURLToPath(import.meta.url));
@@ -114,9 +119,14 @@ async function forwardStream(upstream, response) {
 
 export async function init(router) {
     const { readSecret, SECRET_KEYS } = await loadSecretApi();
+    const { default: nodeFetch } = await import('node-fetch');
+    outboundFetch = nodeFetch;
+    outboundProxy = await createOutboundProxyController();
+
+    console.info('[OpenAI Responses] Outbound proxy support enabled for SillyTavern requestProxy, proxy environment variables, and Windows system proxy.');
 
     router.get('/health', (_request, response) => {
-        response.send({ ok: true, version: '0.1.0' });
+        response.send({ ok: true, version: PLUGIN_VERSION, proxySupport: outboundProxy.support });
     });
 
     router.post('/generate', async (request, response) => {
@@ -147,7 +157,7 @@ export async function init(router) {
 
         try {
             const responsesBody = buildResponsesRequest(body);
-            const upstream = await fetch(endpoint, {
+            const upstream = await outboundFetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -155,6 +165,7 @@ export async function init(router) {
                 },
                 body: JSON.stringify(responsesBody),
                 signal: controller.signal,
+                agent: outboundProxy.getAgent(),
             });
 
             if (!upstream.ok) {
@@ -180,4 +191,10 @@ export async function init(router) {
             if (!response.writableEnded) response.end();
         }
     });
+}
+
+export async function exit() {
+    outboundProxy?.destroy();
+    outboundProxy = undefined;
+    outboundFetch = undefined;
 }
