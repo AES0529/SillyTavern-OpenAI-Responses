@@ -63,8 +63,6 @@ Reverse Proxy 应填写 API 基础地址，例如 `https://api.openai.com/v1`；
 
 ## 网络代理
 
-从 `v0.2.0` 开始，服务端插件支持以下出站代理方式：
-
 1. **Windows 系统代理**：自动读取 Windows 当前启用的手动代理或 PAC 地址，兼容 Clash、Mihomo 等软件的“系统代理”模式；代理开关变化会在约 5 秒内生效。
 2. **SillyTavern requestProxy**：适用于 Windows、Linux、macOS 和 Docker，也是跨平台推荐方式。
 3. **环境变量**：支持 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 和 `NO_PROXY`。
