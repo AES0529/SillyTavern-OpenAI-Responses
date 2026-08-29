@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- 最低支持版本调整为 SillyTavern 1.14.0。
+- 增加旧版自动启动兼容层：SillyTavern 1.14-1.16 无扩展激活钩子时也能初始化。
+- 初始化流程改为幂等，兼容 SillyTavern 1.17-1.18 的 `activate` 钩子且不会重复添加界面和事件。
+- Node.js 最低要求调整为 18，与 SillyTavern 1.14-1.16 保持一致。
+
 ## 0.2.0
 
 - 支持 SillyTavern `requestProxy` 出站代理。

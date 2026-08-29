@@ -20,6 +20,7 @@
 - Responses usage 到 Chat Completions usage 的映射
 - 无状态工具调用所需的加密 reasoning item 回传
 - SillyTavern `requestProxy`、代理环境变量和 Windows 系统代理
+- SillyTavern 1.14.0、1.15.0、1.16.0、1.17.0 与 1.18.0
 
 ## 安装
 
@@ -48,6 +49,12 @@ node plugins.js install https://github.com/AES0529/SillyTavern-OpenAI-Responses
 ```
 
 然后完整重启 SillyTavern。
+
+### 已安装旧版本时升级
+
+1. 在 SillyTavern 的扩展面板中更新 **OpenAI Responses** 前端扩展。
+2. 在 SillyTavern 根目录运行 `node plugins.js update`，更新服务端插件。
+3. 完整重启 SillyTavern，并在浏览器中按 `Ctrl+F5` 强制刷新。
 
 ## 使用
 
@@ -87,11 +94,11 @@ requestProxy:
 - Responses API 一次只生成一个候选，不支持同时并发多个回复。
 - `frequency_penalty`、`presence_penalty`、`seed`、`logit_bias`、`stop` 和响应侧图片生成未映射；选择本来源时相关控件会隐藏。
 - Responses 的 reasoning summary 会转换为 `reasoning_content`，但当前 SillyTavern 对原生 OpenAI 来源不会显示该字段；最终回答与工具调用不受影响。
-- 扩展依赖 SillyTavern 当前的前端模块路径和服务端 secrets API。SillyTavern 1.18.0确定可用，更早的版本不确定。
+- 最低支持 SillyTavern 1.14.0；1.14.0 至 1.18.0 的前端接口和服务端插件接口已逐版核对。
 
 ## 开发验证
 
-要求 Node.js 20 或更高版本：
+要求 Node.js 18 或更高版本：
 
 ```bash
 npm test

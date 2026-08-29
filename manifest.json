@@ -6,8 +6,8 @@
     "js": "index.js",
     "css": "style.css",
     "author": "SillyTavern community",
-    "version": "0.2.0",
-    "minimum_client_version": "1.18.0",
+    "version": "0.3.0",
+    "minimum_client_version": "1.14.0",
     "auto_update": true,
     "hooks": {
         "activate": "init"

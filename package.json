@@ -1,6 +1,6 @@
 {
     "name": "sillytavern-openai-responses",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "OpenAI Responses API source for SillyTavern",
     "type": "module",
     "main": "server/index.js",
@@ -10,7 +10,7 @@
         "check": "node --check index.js && node --check server/index.js && node --check server/adapter.js && node --check server/proxy.js"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=18"
     },
     "peerDependencies": {
         "node-fetch": "^3.3.2",

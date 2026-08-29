@@ -18,9 +18,10 @@ const DEFAULT_SETTINGS = Object.freeze({
 
 let sourceOption;
 let originalFetch;
+let initializationPromise;
 
 function getSettings() {
-    extension_settings[MODULE_NAME] ??= structuredClone(DEFAULT_SETTINGS);
+    extension_settings[MODULE_NAME] ??= { ...DEFAULT_SETTINGS };
     for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
         if (extension_settings[MODULE_NAME][key] === undefined) {
             extension_settings[MODULE_NAME][key] = value;
@@ -146,6 +147,13 @@ function installSourceOption() {
         throw new Error('Chat Completion Source selector was not found.');
     }
 
+    const existingOption = [...select.options].find(option => option.dataset.openaiResponses === 'true');
+    if (existingOption) {
+        sourceOption = existingOption;
+        sourceOption.value = getSettings().enabled ? CORE_SOURCE_VALUE : SENTINEL_VALUE;
+        return;
+    }
+
     sourceOption = document.createElement('option');
     sourceOption.textContent = 'OpenAI Responses';
     sourceOption.value = getSettings().enabled ? CORE_SOURCE_VALUE : SENTINEL_VALUE;
@@ -256,7 +264,13 @@ function onGenerationSettingsReady(generationData) {
     delete generationData.n;
 }
 
-export async function init() {
+async function waitForDocumentReady() {
+    if (document.readyState !== 'loading') return;
+    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
+}
+
+async function initialize() {
+    await waitForDocumentReady();
     getSettings();
     installFetchBridge();
     installSourceOption();
@@ -270,3 +284,18 @@ export async function init() {
         await checkServerPlugin();
     }
 }
+
+export function init() {
+    if (!initializationPromise) {
+        initializationPromise = initialize().catch(error => {
+            initializationPromise = undefined;
+            throw error;
+        });
+    }
+    return initializationPromise;
+}
+
+// SillyTavern 1.17+ calls the manifest activate hook. Versions 1.14-1.16 only
+// import the module, so they need this side-effect bootstrap. init() is
+// intentionally idempotent to make both startup paths safe.
+void init().catch(error => console.error('[OpenAI Responses] Failed to initialize extension.', error));
