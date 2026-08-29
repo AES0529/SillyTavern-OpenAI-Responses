@@ -87,7 +87,7 @@ requestProxy:
 - Responses API 一次只生成一个候选，不支持同时并发多个回复。
 - `frequency_penalty`、`presence_penalty`、`seed`、`logit_bias`、`stop` 和响应侧图片生成未映射；选择本来源时相关控件会隐藏。
 - Responses 的 reasoning summary 会转换为 `reasoning_content`，但当前 SillyTavern 对原生 OpenAI 来源不会显示该字段；最终回答与工具调用不受影响。
-- 扩展依赖 SillyTavern 当前的前端模块路径和服务端 secrets API。已按 SillyTavern `release` 1.18.0（提交 `8172dcd`）实现。
+- 扩展依赖 SillyTavern 当前的前端模块路径和服务端 secrets API。SillyTavern 1.18.0确定可用，更早的版本不确定。
 
 ## 开发验证
 
