@@ -1,6 +1,12 @@
 import { eventSource, event_types, saveSettingsDebounced } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 import { oai_settings } from '../../../openai.js';
+import {
+    createSessionId,
+    ensureSessionId,
+    isOpenCodeSessionUrl,
+    SESSION_METADATA_KEY,
+} from './session.js';
 
 const MODULE_NAME = 'openaiResponses';
 const SENTINEL_VALUE = 'openai_responses';
@@ -14,11 +20,18 @@ const DEFAULT_SETTINGS = Object.freeze({
     store: false,
     truncation: 'disabled',
     manualModel: '',
+    includeBody: '',
+    excludeBody: '',
+    includeHeaders: '',
+    autoOpenCodeSession: true,
+    debugSession: false,
 });
 
 let sourceOption;
 let originalFetch;
 let initializationPromise;
+let pageFallbackSessionId = '';
+let lastSessionStatus = '等待向 OpenCode Go 发送请求';
 
 function getSettings() {
     extension_settings[MODULE_NAME] ??= { ...DEFAULT_SETTINGS };
@@ -28,6 +41,68 @@ function getSettings() {
         }
     }
     return extension_settings[MODULE_NAME];
+}
+
+function getContext() {
+    return globalThis.SillyTavern?.getContext?.();
+}
+
+function randomUuid() {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+        return globalThis.crypto.randomUUID();
+    }
+
+    if (typeof globalThis.crypto?.getRandomValues === 'function') {
+        const bytes = new Uint8Array(16);
+        globalThis.crypto.getRandomValues(bytes);
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = [...bytes].map(value => value.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function getCurrentSessionId() {
+    const value = getContext()?.chatMetadata?.[SESSION_METADATA_KEY];
+    return typeof value === 'string' ? value : '';
+}
+
+function showToast(kind, message) {
+    globalThis.toastr?.[kind]?.(message, 'OpenAI Responses');
+}
+
+function updateSessionUi() {
+    const session = document.getElementById('openai_responses_session_id');
+    const status = document.getElementById('openai_responses_session_status');
+    if (session) session.textContent = getCurrentSessionId() || '首次请求时自动创建';
+    if (status) status.textContent = lastSessionStatus;
+}
+
+function prepareOpenCodeSession(generationData, settings) {
+    if (!settings.autoOpenCodeSession) {
+        lastSessionStatus = '自动会话请求头已关闭';
+        return '';
+    }
+    if (!isOpenCodeSessionUrl(generationData?.reverse_proxy)) {
+        lastSessionStatus = '当前反代不是 OpenCode Go / Zen，不发送会话 ID';
+        return '';
+    }
+
+    const context = getContext();
+    const metadataTarget = context?.chatMetadata ?? {
+        [SESSION_METADATA_KEY]: pageFallbackSessionId,
+    };
+    const session = ensureSessionId(metadataTarget, randomUuid);
+    if (!context?.chatMetadata) pageFallbackSessionId = session.id;
+    if (session.created && context?.chatMetadata) context.saveMetadataDebounced?.();
+
+    lastSessionStatus = '本聊天的会话 ID 已加入请求头';
+    if (settings.debugSession) {
+        console.info(`[OpenAI Responses] x-opencode-session=${session.id}`);
+    }
+    return session.id;
 }
 
 function isGenerateRequest(input) {
@@ -94,6 +169,7 @@ function updateActiveUi() {
         sourceOption.value = CORE_SOURCE_VALUE;
         sourceOption.selected = true;
     }
+    updateSessionUi();
 }
 
 async function checkServerPlugin() {
@@ -235,10 +311,55 @@ function installSettingsPanel() {
                     <input id="openai_responses_manual_model" class="text_pole flex1" type="text" value="${String(settings.manualModel).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}" placeholder="例如 gpt-5.4">
                     <button id="openai_responses_apply_model" class="menu_button">应用</button>
                 </div>
+                <hr>
+                <b>附加请求参数</b>
+                <label for="openai_responses_include_body">附加到 Responses 请求体（YAML/JSON 对象）</label>
+                <textarea id="openai_responses_include_body" class="text_pole" spellcheck="false" placeholder="例如：&#10;max_tool_calls: 8"></textarea>
+                <label for="openai_responses_exclude_body">从 Responses 请求体排除（YAML 字段名列表）</label>
+                <textarea id="openai_responses_exclude_body" class="text_pole" spellcheck="false" placeholder="例如：&#10;- temperature&#10;- include"></textarea>
+                <label for="openai_responses_include_headers">附加 HTTP 请求头（YAML/JSON 对象）</label>
+                <textarea id="openai_responses_include_headers" class="text_pole" spellcheck="false" placeholder="例如：&#10;X-Custom-Header: custom-value"></textarea>
+                <small>以上设置会随 OpenAI Responses 扩展设置保存。不要在这里填写 API Key；密钥仍使用 SillyTavern 的安全存储。</small>
+                <hr>
+                <b>OpenCode Go</b>
+                <label class="checkbox_label">
+                    <input id="openai_responses_auto_session" type="checkbox" ${settings.autoOpenCodeSession ? 'checked' : ''}>
+                    <span>仅对 OpenCode Go / Zen 官方地址自动添加 x-opencode-session</span>
+                </label>
+                <div class="openai-responses-session-row">
+                    <span>当前聊天 ID</span>
+                    <code id="openai_responses_session_id">首次请求时自动创建</code>
+                </div>
+                <div class="flex-container">
+                    <button id="openai_responses_copy_session" type="button" class="menu_button">复制 ID</button>
+                    <button id="openai_responses_rotate_session" type="button" class="menu_button">为本聊天换一个 ID</button>
+                </div>
+                <div class="openai-responses-session-row">
+                    <span>最近状态</span>
+                    <span id="openai_responses_session_status"></span>
+                </div>
+                <label class="checkbox_label">
+                    <input id="openai_responses_debug_session" type="checkbox" ${settings.debugSession ? 'checked' : ''}>
+                    <span>在浏览器控制台记录会话请求头（仅排查问题时开启）</span>
+                </label>
                 <small>函数调用、流式输出、图片输入、JSON Schema、推理强度、verbosity 和 Web Search 会自动转换。</small>
             </div>
         </div>`;
     host.append(panel);
+
+    for (const [id, key] of [
+        ['openai_responses_include_body', 'includeBody'],
+        ['openai_responses_exclude_body', 'excludeBody'],
+        ['openai_responses_include_headers', 'includeHeaders'],
+    ]) {
+        const textarea = panel.querySelector(`#${id}`);
+        if (!textarea) continue;
+        textarea.value = String(settings[key] ?? '');
+        textarea.addEventListener('input', event => {
+            settings[key] = String(event.currentTarget.value);
+            saveSettingsDebounced();
+        });
+    }
 
     panel.querySelector('#openai_responses_store')?.addEventListener('change', event => {
         settings.store = Boolean(event.currentTarget.checked);
@@ -249,15 +370,55 @@ function installSettingsPanel() {
         saveSettingsDebounced();
     });
     panel.querySelector('#openai_responses_apply_model')?.addEventListener('click', applyManualModel);
+    panel.querySelector('#openai_responses_auto_session')?.addEventListener('change', event => {
+        settings.autoOpenCodeSession = Boolean(event.currentTarget.checked);
+        lastSessionStatus = settings.autoOpenCodeSession
+            ? '等待向 OpenCode Go 发送请求'
+            : '自动会话请求头已关闭';
+        saveSettingsDebounced();
+        updateSessionUi();
+    });
+    panel.querySelector('#openai_responses_debug_session')?.addEventListener('change', event => {
+        settings.debugSession = Boolean(event.currentTarget.checked);
+        saveSettingsDebounced();
+    });
+    panel.querySelector('#openai_responses_copy_session')?.addEventListener('click', async () => {
+        const id = getCurrentSessionId();
+        if (!id) return showToast('warning', '当前聊天还没有会话 ID，请先发送一条消息。');
+        try {
+            await navigator.clipboard.writeText(id);
+            showToast('success', '会话 ID 已复制。');
+        } catch {
+            showToast('error', '复制失败，请手动选择上方 ID。');
+        }
+    });
+    panel.querySelector('#openai_responses_rotate_session')?.addEventListener('click', () => {
+        const context = getContext();
+        if (!context?.chatMetadata) return showToast('warning', '请先打开一个聊天。');
+        context.chatMetadata[SESSION_METADATA_KEY] = createSessionId(randomUuid);
+        context.saveMetadataDebounced?.();
+        lastSessionStatus = '已为本聊天生成新的会话 ID';
+        updateSessionUi();
+        showToast('success', '已为本聊天更换会话 ID。');
+    });
+    updateSessionUi();
 }
 
 function onGenerationSettingsReady(generationData) {
-    if (!getSettings().enabled || oai_settings.chat_completion_source !== CORE_SOURCE_VALUE) return;
+    const settings = getSettings();
+    if (!settings.enabled || oai_settings.chat_completion_source !== CORE_SOURCE_VALUE) return;
 
     generationData._openai_responses = {
-        store: Boolean(getSettings().store),
-        truncation: getSettings().truncation === 'auto' ? 'auto' : 'disabled',
+        store: Boolean(settings.store),
+        truncation: settings.truncation === 'auto' ? 'auto' : 'disabled',
+        includeBody: settings.includeBody,
+        excludeBody: settings.excludeBody,
+        includeHeaders: settings.includeHeaders,
     };
+
+    const sessionId = prepareOpenCodeSession(generationData, settings);
+    if (sessionId) generationData._openai_responses.sessionId = sessionId;
+    updateSessionUi();
 
     // Responses has one candidate per request. SillyTavern will still provide
     // normal swiping/regeneration, but not multi-swipe in a single request.
@@ -278,6 +439,12 @@ async function initialize() {
     installSettingsPanel();
     tagUnsupportedControls();
     eventSource.on(event_types.CHAT_COMPLETION_SETTINGS_READY, onGenerationSettingsReady);
+    if (event_types.CHAT_CHANGED) {
+        eventSource.on(event_types.CHAT_CHANGED, () => {
+            lastSessionStatus = '等待向 OpenCode Go 发送请求';
+            updateSessionUi();
+        });
+    }
     updateActiveUi();
 
     if (getSettings().enabled) {

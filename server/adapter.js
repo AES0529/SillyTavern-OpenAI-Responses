@@ -1,3 +1,5 @@
+import { applyBodyCustomizations } from './custom-options.js';
+
 const SIGNATURE_PREFIX = 'st-openai-responses-v1:';
 
 function compactObject(value) {
@@ -190,7 +192,7 @@ export function buildResponsesRequest(body) {
         })
         : undefined;
 
-    return compactObject({
+    const responsesBody = compactObject({
         model: body?.model,
         input: convertMessages(body?.messages),
         stream: Boolean(body?.stream),
@@ -205,6 +207,11 @@ export function buildResponsesRequest(body) {
         tools: tools.length ? tools : undefined,
         tool_choice: tools.length ? convertToolChoice(body?.tool_choice) : undefined,
         parallel_tool_calls: tools.some(tool => tool.type === 'function') ? true : undefined,
+    });
+
+    return applyBodyCustomizations(responsesBody, {
+        includeBody: options.includeBody || body?.custom_include_body,
+        excludeBody: options.excludeBody || body?.custom_exclude_body,
     });
 }
 

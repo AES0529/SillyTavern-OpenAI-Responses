@@ -20,6 +20,8 @@
 - Responses usage 到 Chat Completions usage 的映射
 - 无状态工具调用所需的加密 reasoning item 回传
 - SillyTavern `requestProxy`、代理环境变量和 Windows 系统代理
+- YAML/JSON 格式的附加请求体、排除字段和附加 HTTP 请求头
+- OpenCode Go / Zen `x-opencode-session`：每个聊天固定一个 ID，自动保存到聊天元数据
 - SillyTavern 1.14.0、1.15.0、1.16.0、1.17.0 与 1.18.0
 
 ## 安装
@@ -68,6 +70,58 @@ node plugins.js install https://github.com/AES0529/SillyTavern-OpenAI-Responses
 
 Reverse Proxy 应填写 API 基础地址，例如 `https://api.openai.com/v1`；插件会在末尾追加 `/responses`。
 
+## OpenCode Go、OpenCode Zen 与 Muse Spark
+
+OpenCode Go 要求每个聊天使用一个稳定的 `x-opencode-session` 请求头。插件也会对 OpenCode Zen 做预防性兼容，在当前地址属于以下任一官方地址族时自动处理：
+
+- `https://opencode.ai/zen/go/`（OpenCode Go）
+- `https://opencode.ai/zen/v1/`（OpenCode Zen）
+
+- 第一次发送消息时生成 `ses_...` ID。
+- ID 保存在当前聊天的 `chatMetadata.opencode_go_session_id` 中。
+- 同一个聊天始终复用；新聊天会生成新的 ID。
+- 请求发送到其他网站或 `opencode.ai` 的其他路径时不会携带这个自动生成的 ID。
+
+配置步骤：
+
+1. “聊天补全来源”选择 **OpenAI Responses**。
+2. 填入 OpenCode Go API Key。
+3. Reverse Proxy 填写 `https://opencode.ai/zen/go/v1`。
+4. 在扩展设置中手动应用模型 ID，例如 `muse-spark-1.3-contributor` 或 `muse-spark-1.2-contributor`。
+5. 保持“仅对 OpenCode Go / Zen 官方地址自动添加 x-opencode-session”开启，然后连接并发送消息。
+
+如果使用 OpenCode Zen，则把 Reverse Proxy 改为 `https://opencode.ai/zen/v1`；填写基础地址或已带 `/responses` 的完整地址都能识别。
+
+扩展设置会显示当前聊天 ID，并提供复制和“为本聊天换一个 ID”按钮。不需要在附加请求头框中手写 `x-opencode-session`；即使留有旧值，自动生成的当前聊天 ID 也会覆盖它。
+
+## 附加请求参数和请求头
+
+扩展设置中提供三个输入框，语法与 SillyTavern Custom 端点的“Additional Parameters”一致，并同时接受 YAML 或 JSON。
+
+附加请求体示例：
+
+```yaml
+max_tool_calls: 8
+metadata:
+  client: SillyTavern
+```
+
+排除请求体字段示例：
+
+```yaml
+- temperature
+- include
+```
+
+附加请求头示例：
+
+```yaml
+X-Custom-Header: custom-value
+User-Agent: My-SillyTavern/1.0
+```
+
+附加请求体会在标准 Responses 转换完成后合并，因此可以加入供应商专用参数，也可以覆盖已有参数；随后再应用排除字段。格式错误时，插件会返回清楚的 400 错误，而不是静默丢弃配置。
+
 ## 网络代理
 
 1. **Windows 系统代理**：自动读取 Windows 当前启用的手动代理或 PAC 地址，兼容 Clash、Mihomo 等软件的“系统代理”模式；代理开关变化会在约 5 秒内生效。
@@ -108,6 +162,9 @@ npm run check
 ## 安全说明
 
 - API Key 仍由 SillyTavern 的 secrets 系统保存；前端扩展不会读取已保存的明文密钥。
+- 附加参数和请求头保存在扩展设置中，请勿把 API Key 或其他长期密钥填入这些输入框。
+- `Host`、`Content-Length`、`Connection`、`Transfer-Encoding` 等由网络层控制的请求头会被拒绝。
+- 自动生成的会话 ID 只会发送到 `https://opencode.ai/zen/go/` 或 `https://opencode.ai/zen/v1/` 路径下的 HTTPS 地址。
 
 ## License
 

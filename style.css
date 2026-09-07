@@ -13,6 +13,28 @@
     padding: 0.75rem;
 }
 
+.openai-responses-settings textarea {
+    min-height: 5.5rem;
+    resize: vertical;
+}
+
+.openai-responses-settings hr {
+    width: 100%;
+    opacity: 0.35;
+}
+
+.openai-responses-session-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+.openai-responses-session-row code {
+    overflow-wrap: anywhere;
+}
+
 .openai-responses-active .openai-responses-unsupported {
     display: none !important;
 }

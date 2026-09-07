@@ -48,6 +48,25 @@ test('buildResponsesRequest maps text, images, tools and Responses parameters', 
     assert.equal('stop' in result, false);
 });
 
+test('buildResponsesRequest applies additional and excluded body fields', () => {
+    const result = buildResponsesRequest({
+        model: 'muse-spark-1.3-contributor',
+        messages: [{ role: 'user', content: 'Hello' }],
+        stream: true,
+        temperature: 0.7,
+        _openai_responses: {
+            includeBody: 'temperature: 0.25\nmax_tool_calls: 8\nmetadata:\n  client: SillyTavern',
+            excludeBody: '- include\n- stream',
+        },
+    });
+
+    assert.equal(result.temperature, 0.25);
+    assert.equal(result.max_tool_calls, 8);
+    assert.deepEqual(result.metadata, { client: 'SillyTavern' });
+    assert.equal('include' in result, false);
+    assert.equal('stream' in result, false);
+});
+
 test('convertMessages preserves stateless reasoning and function call output', () => {
     const reasoning = [{ type: 'reasoning', id: 'rs_1', encrypted_content: 'encrypted', summary: [] }];
     const signature = encodeReasoningSignature(reasoning);

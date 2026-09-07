@@ -10,6 +10,7 @@ import {
     createStreamState,
     getResponsesEndpoint,
 } from './adapter.js';
+import { buildUpstreamHeaders, RequestCustomizationError } from './custom-options.js';
 import { createOutboundProxyController } from './proxy.js';
 
 export const info = {
@@ -19,7 +20,7 @@ export const info = {
 };
 
 const OFFICIAL_API_BASE = 'https://api.openai.com/v1';
-const PLUGIN_VERSION = '0.3.0';
+const PLUGIN_VERSION = '0.4.1';
 
 let outboundFetch;
 let outboundProxy;
@@ -126,7 +127,13 @@ export async function init(router) {
     console.info('[OpenAI Responses] Outbound proxy support enabled for SillyTavern requestProxy, proxy environment variables, and Windows system proxy.');
 
     router.get('/health', (_request, response) => {
-        response.send({ ok: true, version: PLUGIN_VERSION, proxySupport: outboundProxy.support });
+        response.send({
+            ok: true,
+            version: PLUGIN_VERSION,
+            proxySupport: outboundProxy.support,
+            customRequestOptions: true,
+            openCodeSession: true,
+        });
     });
 
     router.post('/generate', async (request, response) => {
@@ -157,12 +164,17 @@ export async function init(router) {
 
         try {
             const responsesBody = buildResponsesRequest(body);
+            const options = body?._openai_responses ?? {};
+            const headers = buildUpstreamHeaders({
+                apiKey,
+                endpoint,
+                sessionId: options.sessionId,
+                includeHeaders: options.includeHeaders || body?.custom_include_headers,
+                userAgent: `SillyTavern-OpenAI-Responses/${PLUGIN_VERSION}`,
+            });
             const upstream = await outboundFetch(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
-                },
+                headers,
                 body: JSON.stringify(responsesBody),
                 signal: controller.signal,
                 agent: outboundProxy.getAgent(),
@@ -186,7 +198,8 @@ export async function init(router) {
             if (error?.name === 'AbortError') return;
             console.error('[OpenAI Responses] Request failed:', error);
             if (!response.headersSent) {
-                return response.status(500).send({ error: { message: error.message ?? 'OpenAI Responses request failed.' } });
+                const status = error instanceof RequestCustomizationError ? 400 : 500;
+                return response.status(status).send({ error: { message: error.message ?? 'OpenAI Responses request failed.' } });
             }
             if (!response.writableEnded) response.end();
         }
