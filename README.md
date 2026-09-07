@@ -88,7 +88,7 @@ OpenCode Go 要求每个聊天使用一个稳定的 `x-opencode-session` 请求�
 
 ## 附加请求参数和请求头
 
-选择 **OpenAI Responses** 后，SillyTavern 会在 API 连接区的“连接”按钮旁显示原生 **Additional Parameters / 附加参数** 按钮。插件直接复用这个弹窗和酒馆原生设置，不再需要到扩展面板填写。
+选择 **OpenAI Responses** 后，SillyTavern 会在 API 连接区的“连接”按钮旁显示原生的附加参数按钮。
 
 弹窗中的三个输入框同时接受 YAML 或 JSON：
 
@@ -116,8 +116,6 @@ User-Agent: My-SillyTavern/1.0
 
 附加请求体会在标准 Responses 转换完成后合并，因此可以加入供应商专用参数，也可以覆盖已有参数；随后再应用排除字段。格式错误时，插件会返回清楚的 400 错误，而不是静默丢弃配置。
 
-从 v0.4.x 升级时，原来填写在扩展面板里的内容会自动迁移到原生字段。若原生字段本来已有内容，插件会保留原生内容，避免覆盖现有 Custom 连接配置。
-
 ## 网络代理
 
 1. **Windows 系统代理**：自动读取 Windows 当前启用的手动代理或 PAC 地址，兼容 Clash、Mihomo 等软件的“系统代理”模式；代理开关变化会在约 5 秒内生效。
@@ -144,7 +142,7 @@ requestProxy:
 - Responses API 一次只生成一个候选，不支持同时并发多个回复。
 - `frequency_penalty`、`presence_penalty`、`seed`、`logit_bias`、`stop` 和响应侧图片生成未映射；选择本来源时相关控件会隐藏。
 - Responses 的 reasoning summary 会转换为 `reasoning_content`，但当前 SillyTavern 对原生 OpenAI 来源不会显示该字段；最终回答与工具调用不受影响。
-- 最低支持 SillyTavern 1.14.0；1.14.0 至 1.18.0 的前端接口和服务端插件接口已逐版核对。
+- 最低支持 SillyTavern 1.14.0，不支持更低的酒馆版本。
 
 ## 开发验证
 
@@ -154,13 +152,6 @@ requestProxy:
 npm test
 npm run check
 ```
-
-## 安全说明
-
-- API Key 仍由 SillyTavern 的 secrets 系统保存；前端扩展不会读取已保存的明文密钥。
-- 附加参数和请求头保存在扩展设置中，请勿把 API Key 或其他长期密钥填入这些输入框。
-- `Host`、`Content-Length`、`Connection`、`Transfer-Encoding` 等由网络层控制的请求头会被拒绝。
-- 自动生成的会话 ID 只会发送到 `https://opencode.ai/zen/go/` 或 `https://opencode.ai/zen/v1/` 路径下的 HTTPS 地址。
 
 ## License
 
