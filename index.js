@@ -1,6 +1,7 @@
 import { eventSource, event_types, saveSettingsDebounced } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 import { oai_settings } from '../../../openai.js';
+import { getNativeRequestOptions, migrateLegacyRequestOptions } from './request-settings.js';
 import {
     createSessionId,
     ensureSessionId,
@@ -20,9 +21,6 @@ const DEFAULT_SETTINGS = Object.freeze({
     store: false,
     truncation: 'disabled',
     manualModel: '',
-    includeBody: '',
-    excludeBody: '',
-    includeHeaders: '',
     autoOpenCodeSession: true,
     debugSession: false,
 });
@@ -312,15 +310,6 @@ function installSettingsPanel() {
                     <button id="openai_responses_apply_model" class="menu_button">应用</button>
                 </div>
                 <hr>
-                <b>附加请求参数</b>
-                <label for="openai_responses_include_body">附加到 Responses 请求体（YAML/JSON 对象）</label>
-                <textarea id="openai_responses_include_body" class="text_pole" spellcheck="false" placeholder="例如：&#10;max_tool_calls: 8"></textarea>
-                <label for="openai_responses_exclude_body">从 Responses 请求体排除（YAML 字段名列表）</label>
-                <textarea id="openai_responses_exclude_body" class="text_pole" spellcheck="false" placeholder="例如：&#10;- temperature&#10;- include"></textarea>
-                <label for="openai_responses_include_headers">附加 HTTP 请求头（YAML/JSON 对象）</label>
-                <textarea id="openai_responses_include_headers" class="text_pole" spellcheck="false" placeholder="例如：&#10;X-Custom-Header: custom-value"></textarea>
-                <small>以上设置会随 OpenAI Responses 扩展设置保存。不要在这里填写 API Key；密钥仍使用 SillyTavern 的安全存储。</small>
-                <hr>
                 <b>OpenCode Go</b>
                 <label class="checkbox_label">
                     <input id="openai_responses_auto_session" type="checkbox" ${settings.autoOpenCodeSession ? 'checked' : ''}>
@@ -342,24 +331,11 @@ function installSettingsPanel() {
                     <input id="openai_responses_debug_session" type="checkbox" ${settings.debugSession ? 'checked' : ''}>
                     <span>在浏览器控制台记录会话请求头（仅排查问题时开启）</span>
                 </label>
+                <small>附加请求体、排除字段和附加请求头请直接使用“API 连接”中连接按钮旁的“Additional Parameters / 附加参数”。</small>
                 <small>函数调用、流式输出、图片输入、JSON Schema、推理强度、verbosity 和 Web Search 会自动转换。</small>
             </div>
         </div>`;
     host.append(panel);
-
-    for (const [id, key] of [
-        ['openai_responses_include_body', 'includeBody'],
-        ['openai_responses_exclude_body', 'excludeBody'],
-        ['openai_responses_include_headers', 'includeHeaders'],
-    ]) {
-        const textarea = panel.querySelector(`#${id}`);
-        if (!textarea) continue;
-        textarea.value = String(settings[key] ?? '');
-        textarea.addEventListener('input', event => {
-            settings[key] = String(event.currentTarget.value);
-            saveSettingsDebounced();
-        });
-    }
 
     panel.querySelector('#openai_responses_store')?.addEventListener('change', event => {
         settings.store = Boolean(event.currentTarget.checked);
@@ -407,13 +383,12 @@ function installSettingsPanel() {
 function onGenerationSettingsReady(generationData) {
     const settings = getSettings();
     if (!settings.enabled || oai_settings.chat_completion_source !== CORE_SOURCE_VALUE) return;
+    const requestOptions = getNativeRequestOptions(oai_settings);
 
     generationData._openai_responses = {
         store: Boolean(settings.store),
         truncation: settings.truncation === 'auto' ? 'auto' : 'disabled',
-        includeBody: settings.includeBody,
-        excludeBody: settings.excludeBody,
-        includeHeaders: settings.includeHeaders,
+        ...requestOptions,
     };
 
     const sessionId = prepareOpenCodeSession(generationData, settings);
@@ -432,7 +407,8 @@ async function waitForDocumentReady() {
 
 async function initialize() {
     await waitForDocumentReady();
-    getSettings();
+    const settings = getSettings();
+    if (migrateLegacyRequestOptions(settings, oai_settings)) saveSettingsDebounced();
     installFetchBridge();
     installSourceOption();
     installConnectionNote();

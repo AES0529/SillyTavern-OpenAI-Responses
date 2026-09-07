@@ -31,7 +31,7 @@ test('buildUpstreamHeaders keeps custom headers and enforces the per-chat OpenCo
         endpoint: 'https://opencode.ai/zen/go/v1/responses',
         sessionId: 'ses_fixed-chat-id',
         includeHeaders: 'X-Test: hello\nX-OpenCode-Session: stale\nUser-Agent: My-SillyTavern/1.0',
-        userAgent: 'SillyTavern-OpenAI-Responses/0.4.1',
+        userAgent: 'SillyTavern-OpenAI-Responses/0.5.0',
     }));
 
     assert.equal(headers.authorization, 'Bearer secret');

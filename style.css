@@ -13,14 +13,15 @@
     padding: 0.75rem;
 }
 
-.openai-responses-settings textarea {
-    min-height: 5.5rem;
-    resize: vertical;
-}
-
 .openai-responses-settings hr {
     width: 100%;
     opacity: 0.35;
+}
+
+/* SillyTavern normally shows this native button only for the Custom source.
+   Responses reuses the same fields while its internal source remains OpenAI. */
+.openai-responses-active #customize_additional_parameters {
+    display: flex !important;
 }
 
 .openai-responses-session-row {

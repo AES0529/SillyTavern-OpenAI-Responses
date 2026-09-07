@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- OpenAI Responses 激活时，直接显示并复用 SillyTavern API 连接区的原生“Additional Parameters / 附加参数”按钮。
+- 请求体追加、请求体排除和附加请求头改为读取 SillyTavern 原生 `custom_*` 设置，不再要求打开扩展面板。
+- 首次升级时自动迁移 v0.4.x 扩展面板中已有的附加参数；若原生字段已有内容则以原生内容为准。
+- 移除扩展面板中重复的三个 YAML/JSON 输入框。
+
 ## 0.4.1
 
 - 将自动 `x-opencode-session` 支持扩展到 OpenCode Zen 的 `https://opencode.ai/zen/v1` 地址族。

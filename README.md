@@ -88,7 +88,9 @@ OpenCode Go 要求每个聊天使用一个稳定的 `x-opencode-session` 请求�
 
 ## 附加请求参数和请求头
 
-扩展设置中提供三个输入框，语法与 SillyTavern Custom 端点的“Additional Parameters”一致，并同时接受 YAML 或 JSON。
+选择 **OpenAI Responses** 后，SillyTavern 会在 API 连接区的“连接”按钮旁显示原生 **Additional Parameters / 附加参数** 按钮。插件直接复用这个弹窗和酒馆原生设置，不再需要到扩展面板填写。
+
+弹窗中的三个输入框同时接受 YAML 或 JSON：
 
 附加请求体示例：
 
@@ -113,6 +115,8 @@ User-Agent: My-SillyTavern/1.0
 ```
 
 附加请求体会在标准 Responses 转换完成后合并，因此可以加入供应商专用参数，也可以覆盖已有参数；随后再应用排除字段。格式错误时，插件会返回清楚的 400 错误，而不是静默丢弃配置。
+
+从 v0.4.x 升级时，原来填写在扩展面板里的内容会自动迁移到原生字段。若原生字段本来已有内容，插件会保留原生内容，避免覆盖现有 Custom 连接配置。
 
 ## 网络代理
 
