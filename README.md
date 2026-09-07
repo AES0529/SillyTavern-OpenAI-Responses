@@ -14,15 +14,7 @@
 - 手动填写模型 ID
 - 文本与图片输入
 - SillyTavern 函数工具调用及工具结果回传
-- JSON Schema Structured Outputs
-- Reasoning effort、verbosity、Web Search
-- `store: false`（默认）或允许 OpenAI 存储 Response
-- Responses usage 到 Chat Completions usage 的映射
-- 无状态工具调用所需的加密 reasoning item 回传
-- SillyTavern `requestProxy`、代理环境变量和 Windows 系统代理
-- YAML/JSON 格式的附加请求体、排除字段和附加 HTTP 请求头
-- OpenCode Go / Zen `x-opencode-session`：每个聊天固定一个 ID，自动保存到聊天元数据
-- SillyTavern 1.14.0、1.15.0、1.16.0、1.17.0 与 1.18.0
+- 已兼容SillyTavern 1.14.0、1.15.0、1.16.0、1.17.0 与 1.18.0
 
 ## 安装
 
